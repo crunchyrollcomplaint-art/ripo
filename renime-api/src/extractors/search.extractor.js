@@ -141,6 +141,16 @@ class SearchExtractor extends BaseExtractor {
     };
   }
 
+  extractGenericItem($, item) {
+    const link = this.extractAttribute($(item).find('a[href*="/series/"], a[href*="/movies/"], a[href*="/movie/"]').first(), 'href');
+    const image = this.extractAttribute($(item).find('img').first(), 'src') || this.extractAttribute($(item).find('img').first(), 'data-src');
+    const title = this.extractText($(item).find('.title, p').last()) || this.extractAttribute($(item).find('img').first(), 'alt');
+    if (!link || !title) return null;
+    const fullUrl = this.base.buildUrl(link);
+    const parts = fullUrl.replace(/\/$/, '').split('/').filter(Boolean);
+    return { id: parts[parts.length - 1] || '', type: fullUrl.includes('/movies/') || fullUrl.includes('/movie/') ? 'movie' : 'series', title: title.trim(), image: this.normalizeImageUrl(image) };
+  }
+
   /**
    * Extract search results from HTML response (AJAX format)
    */
@@ -175,6 +185,13 @@ class SearchExtractor extends BaseExtractor {
         results.push(item);
       }
     });
+
+    if (results.length === 0) {
+      $('.anime-blog').each((_, el) => {
+        const item = this.extractGenericItem($, $(el));
+        if (item && item.id && !results.some((existing) => existing.id === item.id)) results.push(item);
+      });
+    }
 
     return results;
   }
@@ -234,8 +251,9 @@ class SearchExtractor extends BaseExtractor {
     });
 
     const results = await this.extractFullPage(html);
-
-    return results;
+    const normalizedQuery = query.trim().toLowerCase();
+    const filtered = results.filter((item) => item.title.toLowerCase().includes(normalizedQuery));
+    return filtered.length ? filtered : results;
   }
 }
 
