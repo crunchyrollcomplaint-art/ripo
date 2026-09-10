@@ -18,10 +18,10 @@ class EpisodesExtractor extends BaseExtractor {
   }
 
   extractEpisode($, item) {
-    const episodeNum = this.extractText($(item).find('.num-epi').first());
-    const title = this.extractText($(item).find('.entry-title').first());
+    const episodeNum = this.extractText($(item).find('.num-epi').first()) || this.extractAttribute($(item).find('img').first(), 'alt') || this.extractText($(item).find('p').first());
+    const title = this.extractText($(item).find('.entry-title').first()) || this.extractText($(item).find('p').first()) || episodeNum;
     const image = this.extractAttribute($(item).find('img').first(), 'src');
-    const link = this.extractAttribute($(item).find('a.lnk-blk').first(), 'href');
+    const link = this.extractAttribute($(item).find('a.lnk-blk').first(), 'href') || this.extractAttribute($(item).find('a[href*="/episode/"]').first(), 'href');
 
     let episodeId = '';
     if (link) {
@@ -61,7 +61,7 @@ class EpisodesExtractor extends BaseExtractor {
     const $ = this.loadCheerio(html);
 
     const episodes = [];
-    $('li').each((_, el) => {
+    $('li, .episodes-container .anime-blog').each((_, el) => {
       const episode = this.extractEpisode($, $(el));
       if (episode.title) {
         episodes.push(episode);
@@ -77,8 +77,8 @@ class EpisodesExtractor extends BaseExtractor {
     const { getRandomUserAgent } = require('../config/user-agents');
 
     const urls = [
-      `${this.base.baseUrl}/series/${id}/`,
-      `${this.base.baseUrl}/movies/${id}/`,
+      `${this.base.baseUrl}/series/${id}`,
+      `${this.base.baseUrl}/movies/${id}`,
     ];
 
     let lastError;
@@ -109,6 +109,21 @@ class EpisodesExtractor extends BaseExtractor {
     const { httpClient } = require('../utils/http');
     const { getRandomUserAgent } = require('../config/user-agents');
 
+    const pageHtml = await httpClient.get(`${this.base.baseUrl}/series/${id}`, { headers: { 'User-Agent': getRandomUserAgent() } });
+    const seasonDataMatch = pageHtml.match(/const\s+seasonsData\s*=\s*(\[[\s\S]*?\]);/);
+    if (seasonDataMatch) {
+      try {
+        const seasonData = JSON.parse(seasonDataMatch[1]);
+        const selected = seasonData.find((entry) => String(entry.season) === String(season));
+        if (selected) {
+          return {
+            postId: '',
+            episodes: (selected.episodes || []).map((ep) => ({ id: String(ep.id).split('/').pop(), season: String(selected.season), episode: String(ep.number), title: String(ep.title), image: this.normalizeImageUrl(ep.image) })),
+          };
+        }
+      } catch (_) { /* fall through to legacy AJAX */ }
+    }
+
     // First get the post ID
     const postId = await this.getPostId(id);
 
@@ -119,7 +134,7 @@ class EpisodesExtractor extends BaseExtractor {
         'User-Agent': getRandomUserAgent(),
         'Accept': '*/*',
         'Accept-Language': 'en-US,en;q=0.9',
-        'Referer': `${this.base.baseUrl}/series/${id}/`,
+        'Referer': `${this.base.baseUrl}/series/${id}`,
         'X-Requested-With': 'XMLHttpRequest',
       },
     });
