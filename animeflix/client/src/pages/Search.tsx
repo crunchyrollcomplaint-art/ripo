@@ -15,7 +15,7 @@ async function liveRequest(path: string, params: Record<string, string>) {
 
 export default function Search() {
   const [location] = useLocation();
-  const query = new URLSearchParams(location.split("?")[1] || "").get("q") || "";
+  const query = new URLSearchParams(typeof window !== "undefined" ? window.location.search : location.split("?")[1] || "").get("q") || "";
   const [items, setItems] = useState(API_CONFIGURED ? [] : demoAnime);
   const [loading, setLoading] = useState(API_CONFIGURED);
   const [error, setError] = useState("");
