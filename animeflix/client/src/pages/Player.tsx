@@ -84,6 +84,7 @@ export default function Player() {
               src={active.url}
               className="h-full w-full border-0"
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
+              sandbox="allow-scripts allow-same-origin allow-presentation"
               allowFullScreen
             />
           ) : (
