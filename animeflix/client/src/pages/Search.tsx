@@ -16,7 +16,7 @@ export default function Search() {
     if (!API_CONFIGURED) { setItems(demoAnime.filter((anime) => anime.title.toLowerCase().includes(query.toLowerCase()))); return; }
     setLoading(true);
     fetchApi<any>("/search", { q: query, provider: localStorage.getItem("animeflix-provider") || "animesalt" })
-      .then((data) => { setItems(listFrom(data).map(normalizeAnime)); setError(""); })
+      .then((data) => { const source = Array.isArray(data) ? data : data?.items ?? data?.results ?? data?.animes ?? data?.data?.items ?? []; setItems(source.map(normalizeAnime)); setError(""); })
       .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Search unavailable"); })
       .finally(() => setLoading(false));
   }, [query]);
