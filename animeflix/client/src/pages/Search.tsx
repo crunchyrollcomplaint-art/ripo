@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
 import AnimeCard from "@/components/AnimeCard";
-import { API_CONFIGURED, demoAnime, fetchApi, listFrom, normalizeAnime } from "@/lib/api";
+import { API_CONFIGURED, demoAnime, fetchApi, normalizeAnime, normalizeHome } from "@/lib/api";
 
 export default function Search() {
   const [location] = useLocation();
@@ -14,8 +14,8 @@ export default function Search() {
   useEffect(() => {
     if (!query && API_CONFIGURED) {
       setLoading(true);
-      fetchApi<any>("/category/series", { page: 1, provider: "animesalt" })
-        .then((data) => { const source = Array.isArray(data) ? data : data?.items ?? data?.results ?? data?.data?.items ?? []; setItems(source.map(normalizeAnime)); setError(""); })
+      fetchApi<any>("/home", { provider: "animesalt" })
+        .then((data) => { const catalog = normalizeHome(data); const source = Object.values(catalog).flat().filter((item: any, index: number, list: any[]) => item?.id && list.findIndex((other) => other.id === item.id) === index); setItems(source.map((item: any) => normalizeAnime(item))); setError(""); })
         .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Browse unavailable"); })
         .finally(() => setLoading(false));
       return;
