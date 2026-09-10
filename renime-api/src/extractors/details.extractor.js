@@ -18,10 +18,10 @@ class DetailsExtractor extends BaseExtractor {
   }
 
   extractEpisode($, item) {
-    const episodeNum = this.extractText($(item).find('.num-epi').first());
-    const title = this.extractText($(item).find('.entry-title').first());
+    const episodeNum = this.extractText($(item).find('.num-epi').first()) || this.extractAttribute($(item).find('img').first(), 'alt') || this.extractText($(item).find('p').first());
+    const title = this.extractText($(item).find('.entry-title').first()) || this.extractText($(item).find('p').first()) || episodeNum;
     const image = this.extractAttribute($(item).find('img').first(), 'src');
-    const link = this.extractAttribute($(item).find('a.lnk-blk').first(), 'href');
+    const link = this.extractAttribute($(item).find('a.lnk-blk').first(), 'href') || this.extractAttribute($(item).find('a[href*="/episode/"]').first(), 'href');
 
     let episodeId = '';
     if (link) {
@@ -99,10 +99,10 @@ class DetailsExtractor extends BaseExtractor {
     const $ = this.loadCheerio(html);
 
     // Extract title
-    const title = this.extractText($('h1.entry-title').first());
+    const title = this.extractText($('h1.entry-title').first()) || this.extractText($('.trailer-content h2').first()) || this.extractText($('h2').first());
 
     // Extract image
-    const image = this.extractAttribute($('article.post.single img').first(), 'src');
+    const image = this.extractAttribute($('article.post.single img').first(), 'src') || this.extractAttribute($('.trailer-box img').first(), 'src') || this.extractAttribute($('meta[property="og:image"]').first(), 'content');
     const imageUrl = this.normalizeImageUrl(image);
 
     // Extract background image (from header or footer background)
@@ -131,6 +131,7 @@ class DetailsExtractor extends BaseExtractor {
     // Try multiple selectors to handle different HTML structures
     const seasonsList = [];
     const seasonSelectors = [
+      '.season-link',
       '.aa-cnt.sub-menu a[data-season]',
       '.aa-drp.choose-season .aa-cnt.sub-menu a[data-season]',
       '.choose-season .sub-menu a[data-season]',
@@ -146,7 +147,7 @@ class DetailsExtractor extends BaseExtractor {
       const seasonElements = $(selector);
       if (seasonElements.length > 0) {
         seasonElements.each((_, el) => {
-          const seasonNum = this.extractAttribute($(el), 'data-season');
+          const seasonNum = this.extractAttribute($(el), 'data-season') || (this.extractText($(el)).match(/(\d+)/) || [])[1];
           if (seasonNum) {
             const num = parseInt(seasonNum, 10);
             if (!isNaN(num) && !seasonsList.includes(num)) {
@@ -176,7 +177,7 @@ class DetailsExtractor extends BaseExtractor {
     seasonsList.sort((a, b) => a - b);
 
     // Extract description
-    const description = this.extractText($('.description').first());
+    const description = this.extractText($('.description').first()) || this.extractText($('.overview').first());
 
     // Extract genres
     const genres = [];
@@ -196,11 +197,11 @@ class DetailsExtractor extends BaseExtractor {
     const duration = this.extractText($('.duration .overviewCss').first());
 
     // Extract year
-    const year = this.extractText($('.year .overviewCss').first());
+    const year = this.extractText($('.year .overviewCss').first()) || ((this.extractText($('.trailer-content').first()).match(/Released:\s*(\d{4})/) || [])[1] || '');
 
     // Extract episodes
     const episodes = [];
-    $('#episode_by_temp li').each((_, el) => {
+    $('#episode_by_temp li, .episodes-container .anime-blog').each((_, el) => {
       const episode = this.extractEpisode($, $(el));
       if (episode.title) {
         episodes.push(episode);
@@ -259,8 +260,8 @@ class DetailsExtractor extends BaseExtractor {
     const { getRandomUserAgent } = require('../config/user-agents');
 
     const urls = [
-      `${this.base.baseUrl}/series/${id}/`,
-      `${this.base.baseUrl}/movies/${id}/`,
+      `${this.base.baseUrl}/series/${id}`,
+      `${this.base.baseUrl}/movies/${id}`,
     ];
 
     let lastError;
