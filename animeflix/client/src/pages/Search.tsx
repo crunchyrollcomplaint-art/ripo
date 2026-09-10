@@ -1,42 +1,269 @@
-import { useEffect, useState } from "react";
-import { Link, useLocation } from "wouter";
-import { ArrowLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
-import AnimeCard from "@/components/AnimeCard";
-import { API_BASE, API_CONFIGURED, demoAnime, normalizeAnime } from "@/lib/api";
+/**
+ * Search Extractor
+ * Copyright (c) 2025 Dark & Pyro Team
+ * ⚠️ Educational use only. Respect copyright laws.
+ */
 
-async function liveRequest(path: string, params: Record<string, string>) {
-  const url = new URL(`${API_BASE}${path}`);
-  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-  const response = await fetch(url.toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
-  const body = await response.json();
-  if (!response.ok || body?.success === false) throw new Error(body?.error || `API request failed (${response.status})`);
-  return body?.data ?? body;
-}
+const { BaseExtractor } = require('./base.extractor');
+const { WatchAnimeWorldBase } = require('../base/base');
 
-export default function Search() {
-  const [location] = useLocation();
-  const query = new URLSearchParams(typeof window !== "undefined" ? window.location.search : location.split("?")[1] || "").get("q") || "";
-  const [items, setItems] = useState(API_CONFIGURED ? [] : demoAnime);
-  const [loading, setLoading] = useState(API_CONFIGURED);
-  const [error, setError] = useState("");
+class SearchExtractor extends BaseExtractor {
+  constructor(providerKey) {
+    super();
+    this.base = new WatchAnimeWorldBase(providerKey);
+  }
 
-  useEffect(() => {
-    if (!query && API_CONFIGURED) {
-      setLoading(true);
-      liveRequest("/home", { provider: "animesalt" })
-        .then((data) => { const sourceData = data?.data ?? data ?? {}; const source = ["newestDrops", "newAnimeArrivals", "mostWatchedShows", "animeMovies", "mostWatchedFilms", "cartoonSeries", "cartoonFilms"].flatMap((key) => Array.isArray(sourceData[key]) ? sourceData[key] : []); const seen = new Set<string>(); const unique = source.filter((item: any) => item?.id && !seen.has(String(item.id)) && seen.add(String(item.id))); setItems(unique.map((item: any) => normalizeAnime(item))); setError(""); })
-      .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Browse unavailable"); })
-        .finally(() => setLoading(false));
-      return;
+  getSourceName() {
+    return this.base.providerName || 'AnimeSalt';
+  }
+
+  /**
+   * Extract nonce from homepage script tag
+   */
+  async getNonce() {
+    const { httpClient } = require('../utils/http');
+    const { getRandomUserAgent } = require('../config/user-agents');
+
+    const html = await httpClient.get(this.base.baseUrl, {
+      headers: {
+        'User-Agent': getRandomUserAgent(),
+      },
+    });
+
+    const $ = this.loadCheerio(html);
+    
+    // Find the script tag with id="funciones_public_js-js-extra"
+    const scriptContent = $('#funciones_public_js-js-extra').html();
+    if (!scriptContent) {
+      throw new Error('Nonce script tag not found');
     }
-    if (!query) { setItems(demoAnime); setLoading(false); return; }
-    if (!API_CONFIGURED) { setItems(demoAnime.filter((anime) => anime.title.toLowerCase().includes(query.toLowerCase()))); return; }
-    setLoading(true);
-    liveRequest("/search", { q: query, provider: "animesalt" })
-      .then((data) => { const source = Array.isArray(data) ? data : data?.items ?? data?.results ?? data?.animes ?? data?.data?.items ?? []; setItems(source.map(normalizeAnime)); setError(""); })
-      .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Search unavailable"); })
-      .finally(() => setLoading(false));
-  }, [query]);
 
-  return <div className="container min-h-[75vh] py-12 sm:py-16"><div className="mb-12 flex flex-col justify-between gap-6 border-b border-white/[0.08] pb-8 sm:flex-row sm:items-end"><div><Link href="/" className="mb-6 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-white/45 transition hover:text-[#e5ff6d]"><ArrowLeft size={14} /> Back home</Link><p className="mb-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#e5ff6d]"><Sparkles size={13} /> The full catalog</p><h1 className="font-display text-4xl font-bold tracking-[-0.06em] text-white sm:text-6xl">{query ? <>Results for <span className="text-white/45">“{query}”</span></> : "Browse anime"}</h1></div><div className="flex items-center gap-2 text-sm text-white/40"><SearchIcon size={16} /> {loading ? "Loading..." : `${items.length} titles`}</div></div>{error ? <p className="mb-6 rounded-xl border border-[#ff6b55]/20 bg-[#ff6b55]/10 p-4 text-sm text-[#ffb0a3]">Live catalog unavailable — the provider did not return results.</p> : null}{loading ? <div className="flex items-center gap-3 py-20 text-white/55"><Loader2 size={20} className="animate-spin text-[#e5ff6d]" /> Loading the Renime catalog...</div> : items.length ? <div className="grid grid-cols-2 gap-x-3 gap-y-9 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-5 xl:grid-cols-6">{items.map((anime: any, index: number) => <AnimeCard key={`${anime.id}-${index}`} anime={anime} />)}</div> : <div className="rounded-3xl border border-dashed border-white/15 bg-white/[0.025] px-6 py-20 text-center"><p className="font-display text-2xl font-bold text-white">{error ? "No live results yet" : "Search any world"}</p><p className="mt-2 text-sm text-white/45">{error ? "Fix the API provider, then search again." : "Try “Naruto”, “Demon Slayer” or “One Piece”."}</p></div>}</div>;
+    // Extract nonce from: var torofilm_Public = {"url":"...","nonce":"6601f641c9",...}
+    const nonceMatch = scriptContent.match(/"nonce"\s*:\s*"([^"]+)"/);
+    if (!nonceMatch) {
+      throw new Error('Nonce not found in script tag');
+    }
+
+    return nonceMatch[1];
+  }
+
+  /**
+   * Extract search result item from simple list format
+   */
+  extractSearchItem($, item) {
+    // Skip items with class "title"
+    const itemClass = $(item).attr('class') || '';
+    if (itemClass.includes('title')) {
+      return null;
+    }
+
+    // Extract link and title
+    const linkEl = $(item).find('a').first();
+    const link = this.extractAttribute(linkEl, 'href');
+    const linkId = linkEl.attr('id') || '';
+    
+    // Skip if no link or if it's the "More results" button
+    if (!link || link === 'javascript:void(0)' || linkId === 'more-shm') {
+      return null;
+    }
+
+    // Extract type from span (type-series, type-movie, etc.)
+    const typeSpan = linkEl.find('span[class^="type-"]').first();
+    let type = '';
+    if (typeSpan.length) {
+      const typeClass = typeSpan.attr('class') || '';
+      if (typeClass.includes('type-series')) {
+        type = 'series';
+      } else if (typeClass.includes('type-movie')) {
+        type = 'movie';
+      } else {
+        type = 'unknown';
+      }
+    }
+
+    // Extract title (text after the span)
+    const title = linkEl.clone().children().remove().end().text().trim();
+
+    // Extract ID from URL
+    const fullUrl = this.base.buildUrl(link);
+    const urlParts = fullUrl.split('/').filter(part => part);
+    const id = urlParts[urlParts.length - 1] || '';
+
+    // If type not found from span, determine from URL
+    if (!type) {
+      if (fullUrl.includes('/series/')) {
+        type = 'series';
+      } else if (fullUrl.includes('/movies/') || fullUrl.includes('/movie/')) {
+        type = 'movie';
+      } else {
+        type = 'unknown';
+      }
+    }
+
+    return {
+      id: id || '',
+      type: type || '',
+      title: title || '',
+    };
+  }
+
+  /**
+   * Extract search result item from full page format (post-lst)
+   */
+  extractFullPageItem($, item) {
+    const title = this.extractText($(item).find('.entry-title').first());
+    const image = this.extractAttribute($(item).find('img').first(), 'src');
+    const link = this.extractAttribute($(item).find('a.lnk-blk').first(), 'href');
+
+    // Extract ID and type from URL
+    let id = '';
+    let type = '';
+    if (link) {
+      const fullUrl = this.base.buildUrl(link);
+      const urlParts = fullUrl.split('/').filter(part => part);
+      id = urlParts[urlParts.length - 1] || '';
+      
+      // Determine type from URL
+      if (fullUrl.includes('/series/')) {
+        type = 'series';
+      } else if (fullUrl.includes('/movies/') || fullUrl.includes('/movie/')) {
+        type = 'movie';
+      } else {
+        type = 'unknown';
+      }
+    }
+
+    return {
+      id: id || '',
+      type: type || '',
+      title: title || '',
+      image: this.normalizeImageUrl(image),
+    };
+  }
+
+  extractGenericItem($, item) {
+    const link = this.extractAttribute($(item).find('a[href*="/series/"], a[href*="/movies/"], a[href*="/movie/"]').first(), 'href');
+    const image = this.extractAttribute($(item).find('img').first(), 'src') || this.extractAttribute($(item).find('img').first(), 'data-src');
+    const title = this.extractText($(item).find('.title, p').last()) || this.extractAttribute($(item).find('img').first(), 'alt');
+    if (!link || !title) return null;
+    const fullUrl = this.base.buildUrl(link);
+    const parts = fullUrl.replace(/\/$/, '').split('/').filter(Boolean);
+    return { id: parts[parts.length - 1] || '', type: fullUrl.includes('/movies/') || fullUrl.includes('/movie/') ? 'movie' : 'series', title: title.trim(), image: this.normalizeImageUrl(image) };
+  }
+
+  /**
+   * Extract search results from HTML response (AJAX format)
+   */
+  async extract(html) {
+    const $ = this.loadCheerio(html);
+
+    const results = [];
+    
+    // Extract items from list (li elements)
+    $('li').each((_, el) => {
+      const item = this.extractSearchItem($, $(el));
+      if (item && item.title) {
+        results.push(item);
+      }
+    });
+
+    return results;
+  }
+
+  /**
+   * Extract search results from full page HTML
+   */
+  async extractFullPage(html) {
+    const $ = this.loadCheerio(html);
+
+    const results = [];
+    
+    // Extract items from post list
+    $('.post-lst li').each((_, el) => {
+      const item = this.extractFullPageItem($, $(el));
+      if (item.title) {
+        results.push(item);
+      }
+    });
+
+    if (results.length === 0) {
+      $('.anime-blog').each((_, el) => {
+        const item = this.extractGenericItem($, $(el));
+        if (item && item.id && !results.some((existing) => existing.id === item.id)) results.push(item);
+      });
+    }
+
+    return results;
+  }
+
+  /**
+   * Search with suggestion term (AJAX)
+   */
+  async search(suggestion) {
+    const { httpClient } = require('../utils/http');
+    const { getRandomUserAgent } = require('../config/user-agents');
+
+    // First get the nonce from homepage
+    const nonce = await this.getNonce();
+
+    // Then make POST request to search endpoint
+    const ajaxUrl = `${this.base.baseUrl}/wp-admin/admin-ajax.php`;
+    
+    // Prepare form data
+    const formData = new URLSearchParams();
+    formData.append('action', 'action_tr_search_suggest');
+    formData.append('nonce', nonce);
+    formData.append('term', suggestion);
+
+    const html = await httpClient.post(
+      ajaxUrl,
+      formData.toString(),
+      {
+        headers: {
+          'User-Agent': getRandomUserAgent(),
+          'Accept': '*/*',
+          'Accept-Language': 'en-US,en;q=0.9',
+          'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+          'Origin': this.base.baseUrl,
+          'Referer': `${this.base.baseUrl}/`,
+          'X-Requested-With': 'XMLHttpRequest',
+        },
+      }
+    );
+
+    const results = await this.extractFullPage(html);
+    const normalizedQuery = query.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const aliases = { sinchan: 'shinchan', shinchan: 'shinchan' };
+    const target = aliases[normalizedQuery] || normalizedQuery;
+    return results.filter((item) => {
+      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return normalizedTitle.includes(target) || target.includes(normalizedTitle);
+    });
+  }
+
+  /**
+   * Search with query term (full page scrape)
+   */
+  async searchFullPage(query) {
+    const { httpClient } = require('../utils/http');
+    const { getRandomUserAgent } = require('../config/user-agents');
+
+    const url = `${this.base.baseUrl}/?s=${encodeURIComponent(query)}`;
+    const html = await httpClient.get(url, {
+      headers: {
+        'User-Agent': getRandomUserAgent(),
+      },
+    });
+
+    const results = await this.extractFullPage(html);
+    const normalizedQuery = query.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const aliases = { sinchan: 'shinchan', shinchan: 'shinchan' };
+    const target = aliases[normalizedQuery] || normalizedQuery;
+    return results.filter((item) => {
+      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return normalizedTitle.includes(target) || target.includes(normalizedTitle);
+    });
+  }
 }
+
+module.exports = { SearchExtractor };
