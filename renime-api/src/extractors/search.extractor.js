@@ -248,7 +248,7 @@ class SearchExtractor extends BaseExtractor {
     const { httpClient } = require('../utils/http');
     const { getRandomUserAgent } = require('../config/user-agents');
 
-    const url = `${this.base.baseUrl}/?s=${encodeURIComponent(query)}`;
+    const url = `${this.base.baseUrl}/search.php?search=${encodeURIComponent(query)}`;
     const html = await httpClient.get(url, {
       headers: {
         'User-Agent': getRandomUserAgent(),
