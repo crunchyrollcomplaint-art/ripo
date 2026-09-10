@@ -12,7 +12,7 @@ export default function Home() {
 
   useEffect(() => {
     const saved = localStorage.getItem("animeflix-provider");
-    if (saved) setProvider(saved);
+    if (saved === "animesalt") setProvider(saved);
   }, []);
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export default function Home() {
         </div>
       </section>
 
-      <div className="container relative -mt-7 z-10"><div className="glass flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e5ff6d]/10 text-[#e5ff6d]"><SlidersHorizontal size={17} /></span><div><p className="text-sm font-bold text-white">Your catalog, your provider</p><p className="text-xs text-white/40">{loading ? "Syncing the live catalog..." : error ? "Live API provider unavailable" : getConfiguredApiMessage()}</p></div></div><label className="flex items-center gap-2 text-xs font-bold text-white/45">SOURCE <span className="relative"><select value={provider} onChange={(event) => changeProvider(event.target.value)} className="appearance-none rounded-lg border border-white/10 bg-white/[0.06] py-2 pl-3 pr-8 text-xs font-bold text-white outline-none"><option value="animesalt" className="bg-[#151821]">AnimeSalt</option><option value="watchanimeworld" className="bg-[#151821]">WatchAnimeWorld</option></select><ChevronDown size={13} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/50" /></span></label></div></div>
+      <div className="container relative -mt-7 z-10"><div className="glass flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e5ff6d]/10 text-[#e5ff6d]"><SlidersHorizontal size={17} /></span><div><p className="text-sm font-bold text-white">Your catalog, your provider</p><p className="text-xs text-white/40">{loading ? "Syncing the live catalog..." : error ? "Live API provider unavailable" : getConfiguredApiMessage()}</p></div></div><label className="flex items-center gap-2 text-xs font-bold text-white/45">SOURCE <span className="relative"><select value={provider} onChange={(event) => changeProvider(event.target.value)} className="appearance-none rounded-lg border border-white/10 bg-white/[0.06] py-2 pl-3 pr-8 text-xs font-bold text-white outline-none"><option value="animesalt" className="bg-[#151821]">AnimeSalt</option></select><ChevronDown size={13} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-white/50" /></span></label></div></div>
 
       <div id="collections" className="container space-y-14 py-16 sm:space-y-20 sm:py-24">
         {loading ? <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-5 text-sm text-white/55"><Loader2 size={18} className="animate-spin text-[#e5ff6d]" /> Pulling fresh titles from Renime...</div> : null}
