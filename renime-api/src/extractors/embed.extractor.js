@@ -48,6 +48,13 @@ class EmbedExtractor extends BaseExtractor {
       }
     });
 
+    // AnimeSalt current episode pages expose the active player as #responsiveIframe.
+    const mainIframe = $('#responsiveIframe').first();
+    const mainSrc = this.extractAttribute(mainIframe, 'src') || this.extractAttribute(mainIframe, 'data-src') || '';
+    if (mainSrc && !servers.some((server) => server.url === mainSrc)) {
+      servers.unshift({ server: 1, name: 'AnimeSalt', url: mainSrc });
+    }
+
     // Filter out servers named "play" (case insensitive) or with problematic domains
     const filteredServers = servers.filter(server => 
       !server.name.toLowerCase().includes('play') &&
@@ -78,7 +85,7 @@ class EmbedExtractor extends BaseExtractor {
     const { getRandomUserAgent } = require('../config/user-agents');
     const { logger } = require('../utils/logger');
 
-    const episodeUrl = `${this.base.baseUrl}/episode/${id}/`;
+    const episodeUrl = `${this.base.baseUrl}/episode/${id}`;
     
     try {
       // Try episode page first
@@ -105,8 +112,8 @@ class EmbedExtractor extends BaseExtractor {
         
         // Try series first, then movies
         const detailUrls = [
-          `${this.base.baseUrl}/series/${seriesId}/`,
-          `${this.base.baseUrl}/movies/${seriesId}/`,
+          `${this.base.baseUrl}/series/${seriesId}`,
+          `${this.base.baseUrl}/movies/${seriesId}`,
         ];
 
         let lastDetailError;
