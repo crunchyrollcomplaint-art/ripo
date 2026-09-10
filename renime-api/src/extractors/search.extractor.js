@@ -231,9 +231,14 @@ class SearchExtractor extends BaseExtractor {
       }
     );
 
-    const results = await this.extract(html);
-
-    return results;
+    const results = await this.extractFullPage(html);
+    const normalizedQuery = query.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const aliases = { sinchan: 'shinchan', shinchan: 'shinchan' };
+    const target = aliases[normalizedQuery] || normalizedQuery;
+    return results.filter((item) => {
+      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return normalizedTitle.includes(target) || target.includes(normalizedTitle);
+    });
   }
 
   /**
@@ -251,9 +256,13 @@ class SearchExtractor extends BaseExtractor {
     });
 
     const results = await this.extractFullPage(html);
-    const normalizedQuery = query.trim().toLowerCase();
-    const filtered = results.filter((item) => item.title.toLowerCase().includes(normalizedQuery));
-    return filtered.length ? filtered : results;
+    const normalizedQuery = query.trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+    const aliases = { sinchan: 'shinchan', shinchan: 'shinchan' };
+    const target = aliases[normalizedQuery] || normalizedQuery;
+    return results.filter((item) => {
+      const normalizedTitle = item.title.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      return normalizedTitle.includes(target) || target.includes(normalizedTitle);
+    });
   }
 }
 
