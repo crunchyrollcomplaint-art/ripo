@@ -1,5 +1,5 @@
 ```tsx
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import {
   AlertTriangle,
@@ -13,11 +13,9 @@ import { API_CONFIGURED, fetchApi, type Server } from "@/lib/api";
 
 export default function Player() {
   const [location] = useLocation();
-
   const id = decodeURIComponent(
     location.split("/watch/")[1]?.split("?")[0] || ""
   );
-
   const title =
     new URLSearchParams(location.split("?")[1] || "").get("title") ||
     "Episode player";
@@ -25,217 +23,6 @@ export default function Player() {
   const [servers, setServers] = useState<Server[]>([]);
   const [active, setActive] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
-  /*
-   * Strong ad/overlay cleanup for SAME-ORIGIN embeds.
-   *
-   * This cannot bypass browser same-origin security.
-   * Therefore it only modifies iframe DOM when the iframe
-   * belongs to the same origin as this website.
-   */
-  const blockAdsInsideIframe = () => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    try {
-      const doc =
-        iframe.contentDocument ||
-        iframe.contentWindow?.document;
-
-      if (!doc) return;
-
-      // Aggressive but common ad/overlay selectors.
-      const adSelectors = [
-        // Generic ad classes / IDs
-        ".ad",
-        ".ads",
-        ".advert",
-        ".advertisement",
-        ".advertising",
-        ".ad-container",
-        ".ad-wrapper",
-        ".ad-banner",
-        ".ad-overlay",
-        ".ad-popup",
-        ".adsbox",
-        ".adsbygoogle",
-
-        // Common naming patterns
-        '[class*="advert"]',
-        '[id*="advert"]',
-        '[class*="ads-"]',
-        '[id*="ads-"]',
-        '[class*="ad-"]',
-        '[id*="ad-"]',
-        '[class*="-ad"]',
-        '[id*="-ad"]',
-
-        // Popup / overlay naming
-        ".popup",
-        ".pop-up",
-        ".modal-ad",
-        ".popup-ad",
-        ".overlay-ad",
-        ".video-ad",
-        ".preroll",
-        ".midroll",
-        ".postroll",
-
-        // Common external ad containers
-        "ins.adsbygoogle",
-        "iframe[src*=\"doubleclick\"]",
-        "iframe[src*=\"googlesyndication\"]",
-        "iframe[src*=\"adservice\"]",
-        "iframe[src*=\"popads\"]",
-        "iframe[src*=\"onclick\"]",
-        "iframe[src*=\"exoclick\"]",
-      ];
-
-      const removeAds = () => {
-        adSelectors.forEach((selector) => {
-          try {
-            doc.querySelectorAll(selector).forEach((element) => {
-              element.remove();
-            });
-          } catch {
-            // Ignore invalid/unsupported selectors.
-          }
-        });
-
-        // Remove suspicious fixed/sticky elements that cover the player.
-        doc.querySelectorAll<HTMLElement>("*").forEach((element) => {
-          try {
-            const style = iframe.contentWindow?.getComputedStyle(element);
-
-            if (!style) return;
-
-            const position = style.position;
-            const zIndex = Number.parseInt(style.zIndex || "0", 10);
-
-            if (
-              (position === "fixed" || position === "sticky") &&
-              zIndex >= 999
-            ) {
-              const text = (
-                element.className?.toString() +
-                " " +
-                element.id
-              ).toLowerCase();
-
-              if (
-                text.includes("ad") ||
-                text.includes("popup") ||
-                text.includes("overlay") ||
-                text.includes("banner") ||
-                text.includes("promo")
-              ) {
-                element.remove();
-              }
-            }
-          } catch {
-            // Ignore inaccessible/invalid elements.
-          }
-        });
-      };
-
-      // CSS-level hiding as an additional layer.
-      const styleId = "__animeflix_adblock_css__";
-
-      if (!doc.getElementById(styleId)) {
-        const style = doc.createElement("style");
-        style.id = styleId;
-
-        style.textContent = `
-          .ad,
-          .ads,
-          .advert,
-          .advertisement,
-          .advertising,
-          .ad-container,
-          .ad-wrapper,
-          .ad-banner,
-          .ad-overlay,
-          .ad-popup,
-          .adsbox,
-          .adsbygoogle,
-          [class*="advert"],
-          [id*="advert"],
-          [class*="ads-"],
-          [id*="ads-"],
-          [class*="ad-"],
-          [id*="ad-"],
-          [class*="-ad"],
-          [id*="-ad"],
-          .popup,
-          .pop-up,
-          .modal-ad,
-          .popup-ad,
-          .overlay-ad,
-          .video-ad,
-          .preroll,
-          .midroll,
-          .postroll,
-          iframe[src*="doubleclick"],
-          iframe[src*="googlesyndication"],
-          iframe[src*="adservice"],
-          iframe[src*="popads"],
-          iframe[src*="onclick"],
-          iframe[src*="exoclick"] {
-            display: none !important;
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-          }
-        `;
-
-        doc.head?.appendChild(style);
-      }
-
-      // First cleanup.
-      removeAds();
-
-      // Keep watching for dynamically inserted ads.
-      const observer = new MutationObserver(() => {
-        removeAds();
-      });
-
-      observer.observe(doc.documentElement, {
-        childList: true,
-        subtree: true,
-      });
-
-      // Extra cleanup for ads injected shortly after player load.
-      const intervals = [
-        window.setTimeout(removeAds, 500),
-        window.setTimeout(removeAds, 1500),
-        window.setTimeout(removeAds, 3000),
-        window.setTimeout(removeAds, 5000),
-        window.setTimeout(removeAds, 10000),
-      ];
-
-      // Store cleanup on iframe element.
-      (
-        iframe as HTMLIFrameElement & {
-          __animeflixCleanup?: () => void;
-        }
-      ).__animeflixCleanup = () => {
-        observer.disconnect();
-        intervals.forEach((timer) => window.clearTimeout(timer));
-      };
-    } catch {
-      /*
-       * Cross-origin iframe:
-       * Browser will prevent access to contentDocument.
-       * The external player remains untouched.
-       */
-    }
-  };
-
-  const handleIframeLoad = () => {
-    blockAdsInsideIframe();
-  };
 
   useEffect(() => {
     if (!API_CONFIGURED) {
@@ -251,7 +38,6 @@ export default function Player() {
         const list = Array.isArray(data?.servers)
           ? data.servers
           : [];
-
         setServers(list);
         setActive(list[0] || null);
       })
@@ -259,22 +45,132 @@ export default function Player() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  // Cleanup previous iframe observer when server changes/unmounts.
-  useEffect(() => {
-    return () => {
-      const iframe = iframeRef.current;
+  // Ad blocker for embeds hosted on the same origin/server.
+  const blockEmbedAds = (
+    event: React.SyntheticEvent<HTMLIFrameElement>
+  ) => {
+    const iframe = event.currentTarget;
 
-      if (iframe) {
-        const cleanup = (
-          iframe as HTMLIFrameElement & {
-            __animeflixCleanup?: () => void;
+    try {
+      const doc =
+        iframe.contentDocument ||
+        iframe.contentWindow?.document;
+
+      if (!doc) return;
+
+      const selectors = [
+        ".ad",
+        ".ads",
+        ".advert",
+        ".advertisement",
+        ".advertising",
+        ".ad-container",
+        ".ad-wrapper",
+        ".ad-banner",
+        ".ad-overlay",
+        ".ad-popup",
+        ".adsbox",
+        ".adsbygoogle",
+        ".popup-ad",
+        ".overlay-ad",
+        ".video-ad",
+        ".preroll",
+        ".midroll",
+        ".postroll",
+        '[class*="advert"]',
+        '[id*="advert"]',
+        '[class*="ads-"]',
+        '[id*="ads-"]',
+        '[class*="ad-"]',
+        '[id*="ad-"]',
+        'iframe[src*="doubleclick"]',
+        'iframe[src*="googlesyndication"]',
+        'iframe[src*="adservice"]',
+        'iframe[src*="popads"]',
+        'iframe[src*="exoclick"]',
+      ];
+
+      const removeAds = () => {
+        selectors.forEach((selector) => {
+          try {
+            doc.querySelectorAll(selector).forEach((el) => {
+              el.remove();
+            });
+          } catch {
+            // Ignore invalid selectors.
           }
-        ).__animeflixCleanup;
+        });
+      };
 
-        cleanup?.();
+      // CSS blocker
+      if (!doc.getElementById("animeflix-adblock")) {
+        const style = doc.createElement("style");
+        style.id = "animeflix-adblock";
+
+        style.textContent = `
+          .ad,
+          .ads,
+          .advert,
+          .advertisement,
+          .advertising,
+          .ad-container,
+          .ad-wrapper,
+          .ad-banner,
+          .ad-overlay,
+          .ad-popup,
+          .adsbox,
+          .adsbygoogle,
+          .popup-ad,
+          .overlay-ad,
+          .video-ad,
+          .preroll,
+          .midroll,
+          .postroll,
+          [class*="advert"],
+          [id*="advert"],
+          [class*="ads-"],
+          [id*="ads-"],
+          [class*="ad-"],
+          [id*="ad-"],
+          iframe[src*="doubleclick"],
+          iframe[src*="googlesyndication"],
+          iframe[src*="adservice"],
+          iframe[src*="popads"],
+          iframe[src*="exoclick"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+        `;
+
+        doc.head?.appendChild(style);
       }
-    };
-  }, [active?.url]);
+
+      // Remove existing ads
+      removeAds();
+
+      // Remove dynamically injected ads
+      const observer = new MutationObserver(() => {
+        removeAds();
+      });
+
+      if (doc.body) {
+        observer.observe(doc.body, {
+          childList: true,
+          subtree: true,
+        });
+      }
+
+      // Extra cleanup after delayed ad injection
+      setTimeout(removeAds, 500);
+      setTimeout(removeAds, 1500);
+      setTimeout(removeAds, 3000);
+      setTimeout(removeAds, 5000);
+    } catch {
+      // Cross-origin iframe: browser prevents access.
+    }
+  };
 
   return (
     <div className="container min-h-[75vh] py-8 sm:py-12">
@@ -341,11 +237,9 @@ export default function Player() {
             </div>
           ) : active?.url ? (
             <iframe
-              ref={iframeRef}
-              key={active.url}
               title={`${title} player`}
               src={active.url}
-              onLoad={handleIframeLoad}
+              onLoad={blockEmbedAds}
               className="h-full w-full border-0"
               allow="autoplay; fullscreen; picture-in-picture"
               allowFullScreen
