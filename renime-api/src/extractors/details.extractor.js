@@ -208,6 +208,22 @@ class DetailsExtractor extends BaseExtractor {
       }
     });
 
+    // AnimeSalt now embeds complete season data in a JSON script block.
+    const seasonDataMatch = html.match(/const\s+seasonsData\s*=\s*(\[[\s\S]*?\]);/);
+    if (seasonDataMatch) {
+      try {
+        const seasonData = JSON.parse(seasonDataMatch[1]);
+        seasonData.forEach((entry) => {
+          const seasonNumber = parseInt(entry.season, 10);
+          if (!Number.isNaN(seasonNumber) && !seasonsList.includes(seasonNumber)) seasonsList.push(seasonNumber);
+        });
+        if (episodes.length === 0 && seasonData[0]?.episodes) {
+          seasonData[0].episodes.forEach((ep) => episodes.push({ id: String(ep.id).split('/').pop(), season: String(seasonData[0].season), episode: String(ep.number), title: String(ep.title), image: this.normalizeImageUrl(ep.image) }));
+        }
+      } catch (_) { /* keep HTML-derived values */ }
+    }
+    seasonsList.sort((a, b) => a - b);
+
     // Extract recommended series
     const recommended = this.extractRecommended($);
 
