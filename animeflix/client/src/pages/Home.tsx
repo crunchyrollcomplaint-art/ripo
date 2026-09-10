@@ -24,7 +24,7 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, [provider]);
 
-  const hero = useMemo<Anime>(() => home.newestDrops?.[0] || demoHome.newestDrops[0], [home]);
+  const hero = useMemo<Anime | null>(() => home.newestDrops?.[0] || home.newAnimeArrivals?.[0] || home.mostWatchedShows?.[0] || null, [home]);
   const newest = home.newestDrops || [];
 
   function changeProvider(value: string) {
@@ -35,16 +35,12 @@ export default function Home() {
   return (
     <div>
       <section className="grain relative isolate min-h-[580px] overflow-hidden border-b border-white/[0.06] sm:min-h-[650px]">
-        <img src={hero.background || hero.image} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-70" />
+        {hero ? <img src={hero.background || hero.image} alt="" className="absolute inset-0 -z-20 h-full w-full object-cover object-center opacity-70" /> : <div className="absolute inset-0 -z-20 bg-[radial-gradient(circle_at_70%_20%,rgba(229,255,109,.14),transparent_35%),linear-gradient(135deg,#12161f,#080a0f)]" />}
         <div className="hero-mask absolute inset-0 -z-10" />
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_72%_30%,rgba(229,255,109,.12),transparent_26%)]" />
         <div className="container relative flex min-h-[580px] items-end pb-16 pt-20 sm:min-h-[650px] sm:pb-24">
           <div className="rise-in max-w-2xl">
-            <div className="mb-5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#e5ff6d]"><span className="rounded-full border border-[#e5ff6d]/30 bg-[#e5ff6d]/10 px-3 py-1.5">Featured drop</span><span className="text-white/45">{hero.type === "movie" ? "Movie" : "Series"}</span></div>
-            <h1 className="max-w-xl font-display text-5xl font-bold leading-[.95] tracking-[-0.08em] text-white sm:text-7xl">{hero.title}</h1>
-            <p className="mt-5 max-w-lg text-sm leading-7 text-white/60 sm:text-base">A universe of stories is waiting. Find your next obsession across fresh drops, classics, movies and fan-favorite series.</p>
-            <div className="mt-7 flex flex-wrap items-center gap-3"><Link href={`/anime/${encodeURIComponent(hero.id)}`} className="flex items-center gap-2 rounded-full bg-[#e5ff6d] px-5 py-3 text-sm font-extrabold text-[#11150d] transition hover:bg-[#f0ff9b]"><Play size={16} fill="currentColor" /> Start watching</Link><Link href={`/anime/${encodeURIComponent(hero.id)}`} className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur transition hover:bg-white/15"><Info size={16} /> More info</Link></div>
-            <div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-white/50"><span className="font-bold text-white/75">{hero.year || "2026"}</span><span className="h-1 w-1 rounded-full bg-white/25" /><span>{hero.season || "Season 1"}</span><span className="h-1 w-1 rounded-full bg-white/25" /><span>{hero.episodes || "12 episodes"}</span><span className="rounded border border-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white/70">HD</span></div>
+            {hero ? <><div className="mb-5 flex flex-wrap items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] text-[#e5ff6d]"><span className="rounded-full border border-[#e5ff6d]/30 bg-[#e5ff6d]/10 px-3 py-1.5">Featured drop</span><span className="text-white/45">{hero.type === "movie" ? "Movie" : "Series"}</span></div><h1 className="max-w-xl font-display text-5xl font-bold leading-[.95] tracking-[-0.08em] text-white sm:text-7xl">{hero.title}</h1><p className="mt-5 max-w-lg text-sm leading-7 text-white/60 sm:text-base">Explore fresh drops, classics, movies and fan-favorite series from the live catalog.</p><div className="mt-7 flex flex-wrap items-center gap-3"><Link href={`/anime/${encodeURIComponent(hero.id)}`} className="flex items-center gap-2 rounded-full bg-[#e5ff6d] px-5 py-3 text-sm font-extrabold text-[#11150d] transition hover:bg-[#f0ff9b]"><Play size={16} fill="currentColor" /> Start watching</Link><Link href={`/anime/${encodeURIComponent(hero.id)}`} className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-5 py-3 text-sm font-bold text-white backdrop-blur transition hover:bg-white/15"><Info size={16} /> More info</Link></div><div className="mt-8 flex flex-wrap items-center gap-4 text-xs text-white/50"><span className="font-bold text-white/75">{hero.year || "Live"}</span><span className="h-1 w-1 rounded-full bg-white/25" /><span>{hero.season || "Series"}</span><span className="h-1 w-1 rounded-full bg-white/25" /><span>{hero.episodes || "Now streaming"}</span><span className="rounded border border-white/20 px-1.5 py-0.5 text-[10px] font-bold text-white/70">HD</span></div></> : <><div className="mb-5 text-[10px] font-black uppercase tracking-[0.25em] text-[#e5ff6d]">Live catalog</div><h1 className="max-w-xl font-display text-5xl font-bold leading-[.95] tracking-[-0.08em] text-white sm:text-7xl">Discover your next anime.</h1><p className="mt-5 max-w-lg text-sm leading-7 text-white/60 sm:text-base">Search the live catalog or browse the latest titles below.</p><Link href="/search" className="mt-7 inline-flex items-center gap-2 rounded-full bg-[#e5ff6d] px-5 py-3 text-sm font-extrabold text-[#11150d]">Browse catalog <ArrowRight size={16} /></Link></>}
           </div>
         </div>
       </section>
