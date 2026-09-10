@@ -99,6 +99,22 @@ class HomeExtractor extends BaseExtractor {
     };
   }
 
+  extractGenericItem($, item) {
+    const link = this.extractAttribute($(item).find('a[href*="/series/"], a[href*="/movies/"], a[href*="/movie/"]').first(), 'href');
+    const image = this.extractAttribute($(item).find('img').first(), 'src') || this.extractAttribute($(item).find('img').first(), 'data-src');
+    const title = this.extractText($(item).find('.title, p').last()) || this.extractAttribute($(item).find('img').first(), 'alt');
+    if (!link || !title) return null;
+    const fullUrl = this.base.buildUrl(link);
+    const cleanUrl = fullUrl.replace(/\/$/, '');
+    const parts = cleanUrl.split('/').filter(Boolean);
+    return {
+      id: parts[parts.length - 1] || '',
+      type: fullUrl.includes('/movies/') || fullUrl.includes('/movie/') ? 'movie' : 'series',
+      title: title.trim(),
+      image: this.normalizeImageUrl(image),
+    };
+  }
+
   async extract(html, url) {
     const $ = this.loadCheerio(html);
 
@@ -209,6 +225,21 @@ class HomeExtractor extends BaseExtractor {
         filmIndex++;
       }
     });
+
+    // AnimeSalt redesigned its homepage and no longer emits the old widget IDs.
+    // Fall back to its current `.anime-blog` cards so the API still returns real titles.
+    if (data.newAnimeArrivals.length === 0 && data.animeMovies.length === 0) {
+      const generic = [];
+      $('.anime-blog').each((_, el) => {
+        const item = this.extractGenericItem($, $(el));
+        if (item && item.id && !generic.some((existing) => existing.id === item.id)) generic.push(item);
+      });
+      generic.forEach((item) => {
+        if (item.type === 'movie') data.animeMovies.push(item);
+        else data.newAnimeArrivals.push(item);
+      });
+      data.mostWatchedShows = data.newAnimeArrivals.slice(0, 10).map((item, index) => ({ ...item, rank: index + 1 }));
+    }
 
     return data;
   }
