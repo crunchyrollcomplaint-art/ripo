@@ -2,7 +2,16 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
 import { ArrowLeft, Loader2, Search as SearchIcon, Sparkles } from "lucide-react";
 import AnimeCard from "@/components/AnimeCard";
-import { API_CONFIGURED, demoAnime, fetchApi, normalizeAnime } from "@/lib/api";
+import { API_BASE, API_CONFIGURED, demoAnime, normalizeAnime } from "@/lib/api";
+
+async function liveRequest(path: string, params: Record<string, string>) {
+  const url = new URL(`${API_BASE}${path}`);
+  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+  const response = await fetch(url.toString(), { headers: { Accept: "application/json" }, cache: "no-store" });
+  const body = await response.json();
+  if (!response.ok || body?.success === false) throw new Error(body?.error || `API request failed (${response.status})`);
+  return body?.data ?? body;
+}
 
 export default function Search() {
   const [location] = useLocation();
@@ -14,16 +23,16 @@ export default function Search() {
   useEffect(() => {
     if (!query && API_CONFIGURED) {
       setLoading(true);
-      fetchApi<any>("/home", { provider: "animesalt" })
+      liveRequest("/home", { provider: "animesalt" })
         .then((data) => { const sourceData = data?.data ?? data ?? {}; const source = ["newestDrops", "newAnimeArrivals", "mostWatchedShows", "animeMovies", "mostWatchedFilms", "cartoonSeries", "cartoonFilms"].flatMap((key) => Array.isArray(sourceData[key]) ? sourceData[key] : []); const seen = new Set<string>(); const unique = source.filter((item: any) => item?.id && !seen.has(String(item.id)) && seen.add(String(item.id))); setItems(unique.map((item: any) => normalizeAnime(item))); setError(""); })
-        .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Browse unavailable"); })
+      .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Browse unavailable"); })
         .finally(() => setLoading(false));
       return;
     }
     if (!query) { setItems(demoAnime); setLoading(false); return; }
     if (!API_CONFIGURED) { setItems(demoAnime.filter((anime) => anime.title.toLowerCase().includes(query.toLowerCase()))); return; }
     setLoading(true);
-    fetchApi<any>("/search", { q: query, provider: localStorage.getItem("animeflix-provider") || "animesalt" })
+    liveRequest("/search", { q: query, provider: "animesalt" })
       .then((data) => { const source = Array.isArray(data) ? data : data?.items ?? data?.results ?? data?.animes ?? data?.data?.items ?? []; setItems(source.map(normalizeAnime)); setError(""); })
       .catch((reason) => { setItems([]); setError(reason instanceof Error ? reason.message : "Search unavailable"); })
       .finally(() => setLoading(false));
