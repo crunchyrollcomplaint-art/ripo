@@ -22,6 +22,11 @@ export default function Player() {
 
     fetchApi<any>(`/embed/${encodeURIComponent(id)}`, {
       provider: localStorage.getItem("animeflix-provider") || "animesalt",
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Referer': 'https://animeflix.cc/',
+      }
     })
       .then((data) => {
         const list = Array.isArray(data?.servers) ? data.servers : [];
@@ -54,7 +59,7 @@ export default function Player() {
           <div className="flex flex-wrap gap-2">
             {servers.map((server, index) => (
               <button
-                key={`${server.url}-${index}`}
+                key={`\( {server.url}- \){index}`}
                 type="button"
                 onClick={() => setActive(server)}
                 className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-semibold transition ${
