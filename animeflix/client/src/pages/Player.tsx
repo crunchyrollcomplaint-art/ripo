@@ -20,7 +20,7 @@ export default function Player() {
       return;
     }
 
-    fetchApi<any>(`/embed/${encodeURIComponent(id)}`, {
+    fetchApi<any>(`/proxy/embed/${encodeURIComponent(id)}`, {
       provider: localStorage.getItem("animeflix-provider") || "animesalt",
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -46,7 +46,7 @@ export default function Player() {
   const animeId = id.split("-").slice(0, -1).join("-") || id;
 
   return (
-    <main classClassName="container min-h-[75vh] py-8 sm:py-12">
+    <main className="container min-h-[75vh] py-8 sm:py-12">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link
@@ -89,7 +89,7 @@ export default function Player() {
           ) : active?.url ? (
             <iframe
               title={`${title} original player`}
-              src={active.url}
+              src={active.url}   // ✅ yeh change kiya – ab /proxy ke through hi jayega
               className="h-full w-full border-0"
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
               referrerPolicy="no-referrer-when-downgrade"
