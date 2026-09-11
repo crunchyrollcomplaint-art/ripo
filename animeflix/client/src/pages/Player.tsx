@@ -13,7 +13,6 @@ export default function Player() {
   const [servers, setServers] = useState<Server[]>([]);
   const [active, setActive] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
-  const [proxyError, setProxyError] = useState("");
 
   useEffect(() => {
     if (!API_CONFIGURED) {
@@ -21,7 +20,7 @@ export default function Player() {
       return;
     }
 
-    fetchApi<any>(`/proxy/embed/${encodeURIComponent(id)}`, {
+    fetchApi<any>(`/embed/${encodeURIComponent(id)}`, {
       provider: localStorage.getItem("animeflix-provider") || "animesalt",
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -37,9 +36,7 @@ export default function Player() {
         setServers(list);
         setActive(list[0] || null);
       })
-      .catch((err) => {
-        console.error("Proxy error:", err);
-        setProxyError("Anime server blocked the proxy. Try different provider or VPN.");
+      .catch(() => {
         setServers([]);
         setActive(null);
       })
@@ -88,11 +85,6 @@ export default function Player() {
             <div className="flex h-full items-center justify-center gap-3 text-sm text-white/60">
               <Loader2 className="animate-spin text-[#e5ff6d]" size={20} />
               Loading original player...
-            </div>
-          ) : proxyError ? (
-            <div className="flex h-full items-center justify-center px-6 text-center text-red-500">
-              {proxyError}<br />
-              <small className="text-white/40 mt-4">Server blocked proxy - use VPN or different provider</small>
             </div>
           ) : active?.url ? (
             <iframe
