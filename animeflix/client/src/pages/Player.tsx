@@ -26,6 +26,9 @@ export default function Player() {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'Referer': 'https://animeflix.cc/',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       }
     })
       .then((data) => {
@@ -43,7 +46,7 @@ export default function Player() {
   const animeId = id.split("-").slice(0, -1).join("-") || id;
 
   return (
-    <main className="container min-h-[75vh] py-8 sm:py-12">
+    <main classClassName="container min-h-[75vh] py-8 sm:py-12">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <Link
