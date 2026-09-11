@@ -13,6 +13,7 @@ export default function Player() {
   const [servers, setServers] = useState<Server[]>([]);
   const [active, setActive] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
+  const [playerError, setPlayerError] = useState("");
 
   useEffect(() => {
     if (!API_CONFIGURED) {
@@ -36,7 +37,9 @@ export default function Player() {
         setServers(list);
         setActive(list[0] || null);
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Player fetch error:", err);
+        setPlayerError("Anime server blocked the player. Try different provider or VPN.");
         setServers([]);
         setActive(null);
       })
@@ -86,6 +89,11 @@ export default function Player() {
               <Loader2 className="animate-spin text-[#e5ff6d]" size={20} />
               Loading original player...
             </div>
+          ) : playerError ? (
+            <div className="flex h-full items-center justify-center px-6 text-center text-red-500">
+              {playerError}<br />
+              <small className="text-white/40 mt-4">Server blocked player - use VPN or different provider</small>
+            </div>
           ) : active?.url ? (
             <iframe
               title={`${title} original player`}
@@ -94,21 +102,6 @@ export default function Player() {
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
-              onLoad={() => {
-                try {
-                  const iframe = document.querySelector(`iframe[src="${active.url}"]`) as HTMLIFrameElement;
-                  if (!iframe || !iframe.contentDocument) return;
-
-                  const doc = iframe.contentDocument;
-                  const style = doc.createElement('style');
-                  style.innerHTML = `
-                    .ad, .ad-container, [class*="ad"], [id*="ad"], .video-ad, .midroll, .skip-ad, 
-                    iframe[src*="ad"], .overlay-ad, .google-ads, .videojs-ad { display: none !important; }
-                    [style*="ad"], [style*="Ad"], .ad-box { display: none !important; }
-                  `;
-                  doc.head.appendChild(style);
-                } catch (e) {}
-              }}
             />
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
