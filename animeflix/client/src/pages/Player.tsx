@@ -3,11 +3,6 @@ import { Link, useLocation } from "wouter";
 import { ArrowLeft, Loader2, Server as ServerIcon } from "lucide-react";
 import { API_CONFIGURED, fetchApi, type Server } from "@/lib/api";
 
-// The provider is cross-origin, so its DOM and network requests cannot be
-// filtered by this app. Keep playback enabled while denying popup creation,
-// top-level navigation, downloads, and form submissions.
-const PLAYER_SANDBOX = "allow-scripts allow-same-origin allow-presentation";
-
 export default function Player() {
   const [location] = useLocation();
   const id = decodeURIComponent(location.split("/watch/")[1]?.split("?")[0] || "");
@@ -89,7 +84,6 @@ export default function Player() {
               src={active.url}
               className="h-full w-full border-0"
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
-              sandbox={PLAYER_SANDBOX}
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
             />
@@ -102,8 +96,8 @@ export default function Player() {
       </section>
 
       <p className="mt-4 text-xs text-white/40">
-        Provider popups and popunders are blocked by the embedded player sandbox. Ads rendered inside the provider player
-        itself require the provider to remove them or a server-side proxy.
+        Playback controls belong to the provider player. Ads rendered inside the provider player require the provider to
+        remove them or a server-side proxy.
       </p>
     </main>
   );
