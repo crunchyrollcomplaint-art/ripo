@@ -13,7 +13,7 @@ export default function Player() {
   const [servers, setServers] = useState<Server[]>([]);
   const [active, setActive] = useState<Server | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [proxyError, setProxyError] = useState("");
 
   useEffect(() => {
     if (!API_CONFIGURED) {
@@ -38,8 +38,8 @@ export default function Player() {
         setActive(list[0] || null);
       })
       .catch((err) => {
-        console.error("Proxy fetch error:", err);
-        setError("Original player unavailable - proxy blocked");
+        console.error("Proxy error:", err);
+        setProxyError("Anime server blocked the proxy. Try different provider or VPN.");
         setServers([]);
         setActive(null);
       })
@@ -89,10 +89,10 @@ export default function Player() {
               <Loader2 className="animate-spin text-[#e5ff6d]" size={20} />
               Loading original player...
             </div>
-          ) : error ? (
-            <div className="flex h-full items-center justify-center px-6 text-center text-sm text-red-500">
-              {error}<br />
-              <small className="text-white/40 mt-4">Proxy blocked - try different provider or VPN</small>
+          ) : proxyError ? (
+            <div className="flex h-full items-center justify-center px-6 text-center text-red-500">
+              {proxyError}<br />
+              <small className="text-white/40 mt-4">Server blocked proxy - use VPN or different provider</small>
             </div>
           ) : active?.url ? (
             <iframe
