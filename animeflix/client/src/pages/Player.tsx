@@ -94,6 +94,18 @@ export default function Player() {
               allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
+              onLoad={() => {
+                // Browser-level ad blocker ke liye extra trick (uBlock Origin se bhi kaam karega)
+                const iframeDoc = (document.querySelector(`iframe[src="${active.url}"]`) as HTMLIFrameElement)?.contentDocument;
+                if (iframeDoc) {
+                  const style = iframeDoc.createElement('style');
+                  style.innerHTML = `
+                    .ad, .ad-container, [class*="ad"], [id*="ad"], iframe[src*="ad"] { display: none !important; }
+                    .video-ad, .midroll-ad { display: none !important; }
+                  `;
+                  iframeDoc.head.appendChild(style);
+                }
+              }}
             />
           ) : (
             <div className="flex h-full items-center justify-center px-6 text-center text-sm text-white/60">
