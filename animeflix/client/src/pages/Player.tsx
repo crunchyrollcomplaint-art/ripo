@@ -95,16 +95,19 @@ export default function Player() {
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
               onLoad={() => {
-                // Browser-level ad blocker ke liye extra trick (uBlock Origin se bhi kaam karega)
-                const iframeDoc = (document.querySelector(`iframe[src="${active.url}"]`) as HTMLIFrameElement)?.contentDocument;
-                if (iframeDoc) {
-                  const style = iframeDoc.createElement('style');
+                try {
+                  const iframe = document.querySelector(`iframe[src="${active.url}"]`) as HTMLIFrameElement;
+                  if (!iframe || !iframe.contentDocument) return;
+
+                  const doc = iframe.contentDocument;
+                  const style = doc.createElement('style');
                   style.innerHTML = `
-                    .ad, .ad-container, [class*="ad"], [id*="ad"], iframe[src*="ad"] { display: none !important; }
-                    .video-ad, .midroll-ad { display: none !important; }
+                    .ad, .ad-container, [class*="ad"], [id*="ad"], .video-ad, .midroll, .skip-ad, 
+                    iframe[src*="ad"], .overlay-ad, .google-ads, .videojs-ad { display: none !important; }
+                    [style*="ad"], [style*="Ad"], .ad-box { display: none !important; }
                   `;
-                  iframeDoc.head.appendChild(style);
-                }
+                  doc.head.appendChild(style);
+                } catch (e) {}
               }}
             />
           ) : (
